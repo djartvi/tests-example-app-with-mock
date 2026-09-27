@@ -1,16 +1,17 @@
 from requests import Session
 
 from base.logger import Logger
-from base.response import ApiResponse
+from base.reporter import Reporter
+from base.base_response import BaseResponse
 from base.settings import Settings
 
 
-class Request:
+class BaseRequest:
     def __init__(self, session: Session, settings: Settings):
         self.session = session
         self.settings = settings
 
-    def _post(self, path: str, form: dict, headers: dict | None = None) -> ApiResponse:
+    def _post(self, path: str, form: dict, headers: dict | None = None) -> BaseResponse:
         url = f'{self.settings.BASE_URL}{path}'
         headers = {
             'Accept': 'application/json',
@@ -27,5 +28,6 @@ class Request:
             timeout=self.settings.CONNECT_TIMEOUT
         )
         Logger.log_response(response)
+        Reporter.attach(response)
 
-        return ApiResponse(response)
+        return BaseResponse(response)

@@ -1,0 +1,50 @@
+# Для прогона тестов mock_app
+
+services:
+  mock-service:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tests
+    command: ["python", "-m", "uvicorn", "mock_external_service.app:app", "--host", "0.0.0.0", "--port", "8888"]
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8888/_mock/health')"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  mock-app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tests
+    command: ["python", "-m", "uvicorn", "mock_app.app:app", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      API_KEY: "123"
+      MOCK_URL: http://mock-service:8888
+    depends_on:
+      mock-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 8080), 2).close()"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  tests:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tests
+    depends_on:
+      mock-service:
+        condition: service_healthy
+      mock-app:
+        condition: service_healthy
+    environment:
+      BASE_URL: http://mock-app:8080
+      API_KEY: "123"
+      MOCK_HOST: mock-service
+      MOCK_PORT: "8888"
+      MOCK_AUTOSTART: "false"
+    volumes:
+      - ../allure-results:/app/allure-results

@@ -1,0 +1,14 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY base/ base/
+COPY mock_external_service/ mock_external_service/
+COPY tests/ tests/
+COPY mock_app/ mock_app/
+COPY pytest.ini .
+
+CMD ["pytest", "-n", "auto", "--alluredir=allure-results"]

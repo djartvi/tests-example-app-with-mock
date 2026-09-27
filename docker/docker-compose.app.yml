@@ -1,0 +1,30 @@
+# Для прогона тестов настоящего jar:
+#   docker compose -f docker/docker-compose.yml -f docker/docker-compose.app.yml up
+#
+# BASE_URL здесь переключает тесты на сервис app. Контейнер mock-app при этом тоже
+# поднимется, но будет простаивать - тесты в него не ходят.
+services:
+  app:
+    # jar монтируется внутрь, а не копируется, поэтому своего Dockerfile здесь нет.
+    image: eclipse-temurin:17-jre
+    volumes:
+      - ../app:/app:ro
+    command: ["java", "-jar", "-Dsecret=123", "-Dmock=http://mock-service:8888/", "/app/app.jar"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      mock-service:
+        condition: service_healthy
+
+  tests:
+    depends_on:
+      mock-service:
+        condition: service_healthy
+      app:
+        condition: service_started
+    environment:
+      BASE_URL: http://app:8080
+      API_KEY: "123"
+      MOCK_HOST: mock-service
+      MOCK_PORT: "8888"
+      MOCK_AUTOSTART: "false"
